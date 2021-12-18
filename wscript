@@ -188,6 +188,11 @@ def configure(conf):
     conf.check_pkg('sord-0 >= 0.14.0', uselib_store='SORD')
     conf.check_pkg('sratom-0 >= 0.4.0', uselib_store='SRATOM')
     conf.check_pkg('sndfile >= 1.0.0', uselib_store='SNDFILE', mandatory=False)
+    conf.check_pkg('vorbis', uselib_store='VORBIS', mandatory=False)
+    conf.check_pkg('vorbisenc', uselib_store='VORBISENC', mandatory=False)
+    conf.check_pkg('opus', uselib_store='OPUS', mandatory=False)
+    conf.check_pkg('flac', uselib_store='FLAC', mandatory=False)
+    conf.check_pkg('ogg', uselib_store='OGG', mandatory=False)
 
     defines = ['_POSIX_C_SOURCE=200809L', '_BSD_SOURCE', '_DEFAULT_SOURCE']
     if conf.env.DEST_OS == 'darwin':
@@ -389,12 +394,12 @@ def build(bld):
     if bld.env.BUILD_TESTS:
         import re
 
-        test_libs      = lib
-        test_cflags    = ['']
-        test_linkflags = ['']
-        if not bld.env.NO_COVERAGE:
-            test_cflags    += ['--coverage']
-            test_linkflags += ['--coverage']
+        #test_libs      = lib
+        #test_cflags    = ['']
+        #test_linkflags = ['']
+        #if not bld.env.NO_COVERAGE:
+            #cflags    += ['--coverage']
+            #linkflags += ['--coverage']
 
         # Copy skeleton LV2 bundle for tests
         for name in ('manifest.ttl', 'lv2core.ttl'):
@@ -415,9 +420,7 @@ def build(bld):
                       target       = 'test/%s.lv2/%s' % (p, p),
                       install_path = None,
                       defines      = defines + ['LILV_STATIC', 'ZIX_STATIC'],
-                      cflags       = test_cflags,
-                      linkflags    = test_linkflags,
-                      lib          = test_libs,
+                      lib          = lib,
                       uselib       = 'LV2')
             obj.env.cshlib_PATTERN = module_pattern
 
@@ -429,12 +432,10 @@ def build(bld):
                       source       = 'test/%s.lv2/test_%s.c' % (p, p),
                       target       = 'test/test_%s' % p,
                       includes     = ['.', 'include', './src'],
-                      use          = 'liblilv_profiled',
+                      use          = 'liblilv_static',
                       install_path = None,
                       defines      = defines + ['LILV_STATIC', 'ZIX_STATIC'],
-                      cflags       = test_cflags,
-                      linkflags    = test_linkflags,
-                      lib          = test_libs,
+                      lib          = lib,
                       uselib       = 'SERD SORD SRATOM LV2')
 
         # Test plugin data files
@@ -448,21 +449,21 @@ def build(bld):
                     SHLIB_EXT    = shlib_ext)
 
         # Static profiled library (for unit test code coverage)
-        obj = bld(features     = 'c cstlib',
-                  source       = lib_source,
-                  includes     = ['.', 'include', './src'],
-                  name         = 'liblilv_profiled',
-                  target       = 'lilv_profiled',
-                  install_path = None,
-                  defines      = defines + ['LILV_STATIC',
-                                            'LILV_INTERNAL',
-                                            'ZIX_STATIC',
-                                            'ZIX_INTERNAL',
-                                            ],
-                  cflags       = test_cflags,
-                  linkflags    = test_linkflags,
-                  lib          = test_libs,
-                  uselib       = 'SERD SORD SRATOM LV2')
+        #obj = bld(features     = 'c cstlib',
+                  #source       = lib_source,
+                  #includes     = ['.', 'include', './src'],
+                  #name         = 'liblilv_profiled',
+                  #target       = 'lilv_profiled',
+                  #install_path = None,
+                  #defines      = defines + ['LILV_STATIC',
+                                            #'LILV_INTERNAL',
+                                            #'ZIX_STATIC',
+                                            #'ZIX_INTERNAL',
+                                            #],
+                  #cflags       = cflags,
+                  #linkflags    = linkflags,
+                  #lib          = lib,
+                  #uselib       = 'SERD SORD SRATOM LV2')
 
         # Unit test program
         testdir = bld.path.get_bld().make_node('test').abspath()
@@ -474,8 +475,8 @@ def build(bld):
                       source       = ['test/%s.c' % test,
                                       'test/lilv_test_utils.c'],
                       includes     = ['.', 'include', './src'],
-                      use          = 'liblilv_profiled',
-                      lib          = test_libs,
+                      use          = 'liblilv_static',
+                      lib          = lib,
                       uselib       = 'SERD SORD SRATOM LV2',
                       target       = 'test/' + test,
                       install_path = None,
@@ -483,23 +484,19 @@ def build(bld):
                                       ['LILV_STATIC'] +
                                       ['LILV_TEST_BUNDLE=\"%s/\"' % bpath] +
                                       ['LILV_TEST_DIR=\"%s/\"' % testdir] +
-                                      ['ZIX_STATIC']),
-                      cflags       = test_cflags,
-                      linkflags    = test_linkflags)
+                                      ['ZIX_STATIC']))
 
         # C++ API test
         if 'COMPILER_CXX' in bld.env:
             obj = bld(features     = 'cxx cxxprogram',
                       source       = 'test/lilv_cxx_test.cpp',
                       includes     = ['.', 'include', './src'],
-                      use          = 'liblilv_profiled',
-                      lib          = test_libs,
+                      use          = 'liblilv_static',
+                      lib          = lib,
                       uselib       = 'SERD SORD SRATOM LV2',
                       target       = 'test/lilv_cxx_test',
                       install_path = None,
-                      defines      = ['LILV_STATIC', 'ZIX_STATIC'],
-                      cxxflags     = test_cflags,
-                      linkflags    = test_linkflags)
+                      defines      = ['LILV_STATIC', 'ZIX_STATIC'],)
 
         if bld.env.LILV_PYTHON:
             test_bundle = 'bindings/bindings_test_plugin.lv2/'
@@ -519,9 +516,7 @@ def build(bld):
                       target       = test_bundle + '/bindings_test_plugin',
                       install_path = None,
                       defines      = defines,
-                      cflags       = test_cflags,
-                      linkflags    = test_linkflags,
-                      lib          = test_libs,
+                      lib          = lib,
                       uselib       = 'LV2')
             obj.env.cshlib_PATTERN = module_pattern
 
@@ -544,7 +539,7 @@ def build(bld):
             build_util(bld, i, defines)
 
         if bld.env.HAVE_SNDFILE:
-            obj = build_util(bld, 'utils/lv2apply', defines, 'SNDFILE')
+            obj = build_util(bld, 'utils/lv2apply', defines, 'SNDFILE VORBIS VORBISENC OPUS FLAC OGG')
 
         # lv2bench (less portable than other utilities)
         if (bld.env.DEST_OS != 'win32' and
@@ -577,7 +572,7 @@ def test(tst):
         if tst.is_defined('LILV_CXX'):
             check(['./test/lilv_cxx_test'])
 
-    if tst.env.LILV_PYTHON:
+    if tst.env.LILV_PYTHON and tst.env.BUILD_SHARED:
         with tst.group('python') as check:
             check(['python', '-m', 'unittest', 'discover', 'bindings/'])
 
